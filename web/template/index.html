@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="twelve columns">
+        <h1>Todobin</h1>
+        <form action="/" method="post">
+          <label for="name">List Name</label>
+          <input class="u-full-width" type="text" placeholder="List Name" name="name" id="name">
+          <label for="todolist">Todo List</label>
+          <textarea class="u-full-width" name="todolist" placeholder="Todos" id="todolist">{{.Todo}}</textarea>
+          <input class="button-primary" type="submit" value="Submit">
+        </form>
+        <br />
+        <ul>
+          {{range .Todos}}
+          <li>{{.Todo}}</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

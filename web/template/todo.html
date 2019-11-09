@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+  <style>
+    .todo-item {
+      list-style: none;
+    }
+
+    .todo-item.done {
+      text-decoration: line-through
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <h1>{{.TodoList.Name}}</h1>
+      {{if .TodoList.Todos}}
+      <ul class="todo-list">
+        {{range .TodoList.Todos}}
+        <li class="todo-item{{if .Done}} done{{end}}" id="todo-{{.ID}}">
+          <label for="todo-check-{{.ID}}">
+            <input type="checkbox" class="todo-done" name="done" value="true" data-id="{{.ID}}" id="todo-check-{{.ID}}"
+              {{if .Done}}checked{{end}} />
+            <span class="todo-todo">{{.Todo}}</span>
+          </label>
+        </li>
+        {{end}}
+      </ul>
+      {{end}}
+    </div>
+  </div>
+  <script>
+    async function markTodo(evt) {
+      var check = evt.target,
+        id = check.getAttribute('data-id'),
+        url = window.location.href + '/done/' + id
+
+      var response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({ done: check.checked }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      var result = await response.json();
+      var todoItem = document.getElementById('todo-' + result.id)
+      if (result.done) {
+        todoItem.classList.add('done')
+      } else {
+        todoItem.classList.remove('done')
+      }
+    }
+
+    var checks = document.querySelectorAll('.todo-done')
+
+    for (var i = 0; i < checks.length; i++) {
+      var check = checks[i]
+      check.addEventListener('change', markTodo)
+    }
+  </script>
+</body>
+
+</html>

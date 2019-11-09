@@ -1,0 +1,21 @@
+FROM golang:1-buster
+
+RUN adduser go \
+  && mkdir /home/go/.vscode-server \
+  && chown go:go /home/go/.vscode-server
+
+USER go
+WORKDIR /home/go
+RUN go get github.com/AgentCosmic/xnotify
+
+RUN git clone https://github.com/magicmonty/bash-git-prompt.git ~/.bash-git-prompt --depth=1 && \
+  curl -o ~/.git-bash-completion.bash https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash && \
+  {\
+  echo 'source $HOME/.git-bash-completion.bash' && \
+  echo 'if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then' && \
+  echo '    GIT_PROMPT_ONLY_IN_REPO=1' && \
+  echo '    source $HOME/.bash-git-prompt/gitprompt.sh' && \
+  echo 'fi'; \
+  } >> ~/.bashrc
+
+CMD exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
