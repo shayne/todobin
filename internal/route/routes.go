@@ -77,7 +77,8 @@ func HandleTodos(w http.ResponseWriter, r *http.Request) {
 	listID := vars["listId"]
 	list, err := model.GetTodosListByID(listID)
 	if err != nil {
-		log.Fatalf("[error] failed to get rows by list id: %v\n", err)
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 	err = tpl.ExecuteTemplate(w, "todo.html", struct {
 		TodoList model.TodoList
@@ -92,15 +93,10 @@ func HandleTodos(w http.ResponseWriter, r *http.Request) {
 // HandleTodoDone marks todo as done or undone
 func HandleTodoDone(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Fatalf("[error] Route only handles POST requests")
 		w.WriteHeader(http.StatusForbidden)
+		log.Fatalf("[error] Route only handles POST requests")
 		return
 	}
-	vars := mux.Vars(r)
-	listID := vars["listId"]
-	todoID := vars["todoId"]
-
-	todo := model.Todo{}
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -110,12 +106,18 @@ func HandleTodoDone(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
+	todo := model.Todo{}
 	err = json.Unmarshal(b, &todo)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Fatalf("[error] failed to unmarshal json: %v\n", err)
 	}
+
+	vars := mux.Vars(r)
+	listID := vars["listId"]
+	todoID := vars["todoId"]
+
 	todo, err = model.MarkTodoAsDone(listID, todoID, todo.Done)
 
 	if err != nil {
