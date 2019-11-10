@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/gorilla/mux"
+	"github.com/microcosm-cc/bluemonday"
 	"gitub.com/imartingraham/todobin/internal/model"
 )
 
@@ -24,18 +25,25 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 		todo = ""
 		todos = []string{}
 	case "POST":
+		// Disallow all html tags
+		p := bluemonday.StrictPolicy()
 
 		if err := r.ParseForm(); err != nil {
 			fmt.Fprintf(w, "ParseForm() err: %v", err)
 		}
 		todo = r.FormValue("todolist")
-		listName := r.FormValue("name")
+		listName := p.Sanitize(r.FormValue("name"))
+
 		rawTodos := strings.Split(r.FormValue("todolist"), "\n")
+
 		for _, t := range rawTodos {
 			if strings.HasPrefix(t, "-") {
 				t = strings.Replace(t, "-", "", 1)
 			}
-			t = strings.Trim(t, " ")
+			// When I sanitize the string before splitting
+			// it doesn't work, so for now I'm just sanitizing
+			// each line
+			t = p.Sanitize(strings.Trim(t, " "))
 			todos = append(todos, t)
 		}
 
@@ -101,6 +109,7 @@ func HandleTodoDone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer r.Body.Close()
+
 	err = json.Unmarshal(b, &todo)
 
 	if err != nil {
