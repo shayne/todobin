@@ -12,17 +12,11 @@
         <h1>Todobin</h1>
         <form action="/" method="post">
           <label for="name">List Name</label>
-          <input class="u-full-width" type="text" placeholder="List Name" name="name" id="name">
+          <input class="u-full-width" type="text" placeholder="List Name" name="name" id="name" required>
           <label for="todolist">Todo List</label>
-          <textarea class="u-full-width" name="todolist" placeholder="Todos" id="todolist">{{.Todo}}</textarea>
+          <textarea class="u-full-width" name="todolist" placeholder="Todos" id="todolist" required>{{.Todo}}</textarea>
           <input class="button-primary" type="submit" value="Submit">
         </form>
-        <br />
-        <ul>
-          {{range .Todos}}
-          <li>{{.Todo}}</li>
-          {{end}}
-        </ul>
       </div>
     </div>
   </div>

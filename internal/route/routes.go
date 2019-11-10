@@ -18,12 +18,10 @@ import (
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	tpl := template.Must(template.ParseFiles("web/template/index.html"))
 	var todo string
-	var todos []string
-
+	var name string
 	switch r.Method {
 	case "GET":
-		todo = ""
-		todos = []string{}
+
 	case "POST":
 		// Disallow all html tags
 		p := bluemonday.StrictPolicy()
@@ -31,6 +29,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			fmt.Fprintf(w, "ParseForm() err: %v", err)
 		}
+		var todos []string
 		todo = r.FormValue("todolist")
 		listName := p.Sanitize(r.FormValue("name"))
 
@@ -59,11 +58,11 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
 	err := tpl.ExecuteTemplate(w, "index.html", struct {
-		Todo  string
-		Todos []string
+		Name string
+		Todo string
 	}{
-		Todo:  todo,
-		Todos: todos,
+		Name: name,
+		Todo: todo,
 	})
 	if err != nil {
 		log.Fatalf("[error] failed to execute index.html: %v\n", err)
