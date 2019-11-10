@@ -3,7 +3,6 @@ package route
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -32,9 +31,11 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "ParseForm() err: %v", err)
 			return
 		}
-		var todos []string
+		todoList := &model.TodoList{
+			Name: p.Sanitize(r.FormValue("name")),
+		}
+
 		tplvars.Todo = r.FormValue("todolist")
-		listName := p.Sanitize(r.FormValue("name"))
 
 		rawTodos := strings.Split(r.FormValue("todolist"), "\n")
 
@@ -45,16 +46,17 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 			// When I sanitize the string before splitting
 			// it doesn't work, so for now I'm just sanitizing
 			// each line
-			t = p.Sanitize(strings.TrimSpace(t))
-			todos = append(todos, t)
+			todoList.Todos = append(todoList.Todos, &model.Todo{
+				Todo: p.Sanitize(strings.TrimSpace(t)),
+			})
 		}
 
-		insertedTodos, err := model.CreateTodos(listName, todos)
+		err := todoList.Save()
 		if err != nil {
 			panic(err)
 		}
 
-		u := "/todo/" + insertedTodos[0].ListID
+		u := "/todo/" + todoList.ID
 		http.Redirect(w, r, u, 301)
 		return
 	default:
@@ -76,7 +78,7 @@ func HandleTodos(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	list, err := model.GetTodosListByID(listID)
+	list, err := model.TodoListByID(listID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -93,40 +95,29 @@ func HandleTodos(w http.ResponseWriter, r *http.Request) {
 
 // HandleTodoDone marks todo as done or undone
 func HandleTodoDone(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method != "PUT" {
 		w.WriteHeader(http.StatusForbidden)
-		log.Fatalf("[error] Route only handles POST requests")
+		log.Fatalf("[error] Route only handles PUT requests")
 		return
-	}
-
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatalf("[error] failed to read request body: %v\n", err)
-	}
-
-	defer r.Body.Close()
-
-	todo := &model.Todo{}
-	err = json.Unmarshal(b, &todo)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatalf("[error] failed to unmarshal json: %v\n", err)
 	}
 
 	vars := mux.Vars(r)
 	listID := vars["listId"]
 	todoID := vars["todoId"]
 
-	todo, err = model.MarkTodoAsDone(listID, todoID, todo.Done)
-
+	t, err := model.TodoByID(listID, todoID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatalf("[error] failed to update todo: %v\n", err)
+		log.Fatalf("[error] failed to fetch todo: %v\n", err)
 	}
-	jsonData, err := json.Marshal(todo)
 
+	err = t.ToggleDone()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Fatalf("[error] failed to toggle done for todo: %v\n", err)
+	}
+
+	jsonData, err := json.Marshal(t)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Fatalf("[error] could not json encode todo: %v\n", err)
