@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	// pg sets up postgres sql
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
 
-// InitDB initializes DB connection
-func InitDB() {
-
+func init() {
 	dbHost := os.Getenv("POSTGRES_HOST")
 	dbName := os.Getenv("POSTGRES_DB")
 	dbUser := os.Getenv("POSTGRES_USER")

@@ -17,8 +17,10 @@ import (
 // HandleIndex is the route for "/"
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	tpl := template.Must(template.ParseFiles("web/template/index.html"))
-	var todo string
-	var name string
+	var tplvars struct {
+		Name string
+		Todo string
+	}
 	switch r.Method {
 	case "GET":
 
@@ -28,9 +30,10 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 		if err := r.ParseForm(); err != nil {
 			fmt.Fprintf(w, "ParseForm() err: %v", err)
+			return
 		}
 		var todos []string
-		todo = r.FormValue("todolist")
+		tplvars.Todo = r.FormValue("todolist")
 		listName := p.Sanitize(r.FormValue("name"))
 
 		rawTodos := strings.Split(r.FormValue("todolist"), "\n")
@@ -42,7 +45,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 			// When I sanitize the string before splitting
 			// it doesn't work, so for now I'm just sanitizing
 			// each line
-			t = p.Sanitize(strings.Trim(t, " "))
+			t = p.Sanitize(strings.TrimSpace(t))
 			todos = append(todos, t)
 		}
 
@@ -51,19 +54,13 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		u := fmt.Sprintf("/todo/%s", insertedTodos[0].ListID)
+		u := "/todo/" + insertedTodos[0].ListID
 		http.Redirect(w, r, u, 301)
 		return
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
-	err := tpl.ExecuteTemplate(w, "index.html", struct {
-		Name string
-		Todo string
-	}{
-		Name: name,
-		Todo: todo,
-	})
+	err := tpl.ExecuteTemplate(w, "index.html", tplvars)
 	if err != nil {
 		log.Fatalf("[error] failed to execute index.html: %v\n", err)
 	}
@@ -73,14 +70,19 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 func HandleTodos(w http.ResponseWriter, r *http.Request) {
 	tpl := template.Must(template.ParseFiles("web/template/todo.html"))
 	vars := mux.Vars(r)
-	listID := vars["listId"]
+	listID, ok := vars["listId"]
+	if !ok {
+		log.Println("[error] listId not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	list, err := model.GetTodosListByID(listID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	err = tpl.ExecuteTemplate(w, "todo.html", struct {
-		TodoList model.TodoList
+		TodoList *model.TodoList
 	}{
 		TodoList: list,
 	})
@@ -105,7 +107,7 @@ func HandleTodoDone(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	todo := model.Todo{}
+	todo := &model.Todo{}
 	err = json.Unmarshal(b, &todo)
 
 	if err != nil {
