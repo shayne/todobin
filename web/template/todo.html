@@ -40,8 +40,7 @@
         url = window.location.href + '/done/' + id
 
       var response = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify({ done: check.checked }),
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         }

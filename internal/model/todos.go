@@ -19,81 +19,119 @@ type TodoList struct {
 	Todos []*Todo `json:"todos"`
 }
 
-// GetTodosListByID returns slice of Todos based on the listID passed in
-func GetTodosListByID(listID string) (*TodoList, error) {
-	listStatement := `SELECT id, name FROM lists WHERE id = $1`
+// TodoListByID fetches a list and its todos
+func TodoListByID(id string) (*TodoList, error) {
 	list := &TodoList{}
 
-	err := db.QueryRow(listStatement, listID).Scan(&list.ID, &list.Name)
+	sql := "SELECT id, name FROM lists WHERE id = $1"
+	err := db.QueryRow(sql, id).Scan(&list.ID, &list.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	sqlStatement := `SELECT id, list_id, todo, done FROM todos WHERE list_id = $1 ORDER BY created_at ASC;`
+	list.Todos, err = TodosByListID(id)
 
-	rows, err := db.Query(sqlStatement, listID)
+	return list, nil
+}
+
+func (tl *TodoList) validate() error {
+	if tl.Name == "" {
+		return errors.New("name empty, must be set")
+	}
+	if len(tl.Todos) == 0 {
+		return errors.New("no todos, must have at least one")
+	}
+
+	return nil
+}
+
+// Save saves a new list to the database
+func (tl *TodoList) Save() error {
+	if err := tl.validate(); err != nil {
+		return err
+	}
+	sql := `INSERT INTO lists(name) VALUES($1) RETURNING id;`
+	err := db.QueryRow(sql, tl.Name).Scan(&tl.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, t := range tl.Todos {
+		t.ListID = tl.ID
+		err := t.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// TodoByID fetches a single todo given a listID and todoID
+func TodoByID(listID, todoID string) (*Todo, error) {
+	t := &Todo{}
+	sql := `SELECT id, list_id, todo, done FROM todos WHERE list_id = $1 AND id = $2 ORDER BY created_at ASC;`
+	err := db.QueryRow(sql, listID, todoID).Scan(&t.ID, &t.ListID, &t.Todo, &t.Done)
 	if err != nil {
 		return nil, err
 	}
 
+	return t, nil
+}
+
+// TodosByListID fetches the todos for a given list ID
+func TodosByListID(id string) ([]*Todo, error) {
+	sql := `SELECT id, list_id, todo, done FROM todos WHERE list_id = $1 ORDER BY created_at ASC;`
+	rows, err := db.Query(sql, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var todos []*Todo
 	for rows.Next() {
 		todo := &Todo{}
 		err := rows.Scan(&todo.ID, &todo.ListID, &todo.Todo, &todo.Done)
 		if err != nil {
 			return nil, err
 		}
-		list.Todos = append(list.Todos, todo)
+		todos = append(todos, todo)
 	}
-	return list, nil
+
+	return todos, nil
 }
 
-// CreateTodos inserts todos into the todos table
-func CreateTodos(name string, todos []string) ([]*Todo, error) {
-	var newTodos []*Todo
-	listID, err := createList(name)
-
-	if err != nil {
-		return nil, err
+func (t *Todo) validate() error {
+	if t.ListID == "" {
+		return errors.New("ListID is empty, must be set")
 	}
-
-	sqlStatement := `INSERT INTO todos(list_id, todo) VALUES($1, $2)
-		RETURNING id, list_id, todo, done`
-	for _, todo := range todos {
-		var createdTodo = &Todo{}
-		err := db.QueryRow(sqlStatement, listID, todo).Scan(&createdTodo.ID, &createdTodo.ListID, &createdTodo.Todo, &createdTodo.Done)
-		if err != nil {
-			return nil, err
-		}
-		if createdTodo.ID == "" {
-			return nil, errors.New("created todo ID empty")
-		}
-		newTodos = append(newTodos, createdTodo)
+	if t.Todo == "" {
+		return errors.New("Todo is empty, must be set")
 	}
-	return newTodos, nil
+	return nil
 }
 
-// createList creates a list and returns the UUID
-func createList(name string) (string, error) {
-	var id string
-	sqlStatement := `INSERT INTO lists(name) VALUES($1) RETURNING id;`
-	err := db.QueryRow(sqlStatement, name).Scan(&id)
-	if err != nil {
-		return "", err
+// Save saves an individual todo to the database
+func (t *Todo) Save() error {
+	if err := t.validate(); err != nil {
+		return err
 	}
-	return id, nil
+
+	sql := `INSERT INTO todos(list_id, todo) VALUES($1, $2) RETURNING id`
+	err := db.QueryRow(sql, t.ListID, t.Todo).Scan(&t.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// MarkTodoAsDone mark todo as done or undone depending on the value passed in
-func MarkTodoAsDone(listID string, todoID string, done bool) (*Todo, error) {
-	todo := &Todo{}
-
-	sqlStatement := `UPDATE todos SET done = $1 WHERE id = $2 AND list_id = $3 RETURNING id, list_id, todo, done`
-	err := db.QueryRow(sqlStatement, done, todoID, listID).
-		Scan(&todo.ID, &todo.ListID, &todo.Todo, &todo.Done)
-
+// ToggleDone toggles done for the todo and saves to db
+func (t *Todo) ToggleDone() error {
+	sql := `UPDATE todos SET done = $1 WHERE id = $2 AND list_id = $3 RETURNING done`
+	err := db.QueryRow(sql, !t.Done, t.ID, t.ListID).Scan(&t.Done)
 	if err != nil {
-		return todo, err
+		return err
 	}
 
-	return todo, nil
+	return nil
 }
