@@ -14,7 +14,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	fs := http.FileServer(http.Dir("./public"))
+	fs := http.FileServer(http.Dir("./web/public"))
 	r.PathPrefix("/scripts/").Handler(fs)
 	r.PathPrefix("/styles/").Handler(fs)
 	r.HandleFunc("/todo/{listId}", route.HandleTodos)
