@@ -20,6 +20,7 @@ services:
       - POSTGRES_DB=toodobin_dev
       - POSTGRES_USER=toodobin_dev
       - POSTGRES_PASSWORD=toodobin_dev
+      - CSRF_TOKEN="02A],K1zcT7Z9Ni)9-uv%-]S?0$UIz"
   db:
     image: postgres
     ports:

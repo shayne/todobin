@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/csrf"
 	"gitub.com/imartingraham/todobin/internal/route"
 )
 
@@ -18,7 +19,8 @@ func main() {
 	http.Handle("/", r)
 	port := os.Getenv("PORT")
 	fmt.Println("Ready and listening on " + port)
-	err := http.ListenAndServe(":"+port, nil)
+	p := csrf.Protect([]byte(os.Getenv("CSRF_TOKEN")))
+	err := http.ListenAndServe(":"+port, p(r))
 	if err != nil {
 		panic(err)
 	}

@@ -3,13 +3,19 @@
 
 <head>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+  <meta name="gorilla.csrf.Token" content="{{.CSRFToken}}" />
   <style>
     .todo-item {
       list-style: none;
     }
 
     .todo-item.done {
-      text-decoration: line-through
+      text-decoration: line-through;
+      color: #aaa;
+    }
+
+    .todo-item label {
+      font-weight: normal;
     }
   </style>
 </head>
@@ -35,13 +41,15 @@
   </div>
   <script>
     async function markTodo(evt) {
-      var check = evt.target,
+      var csrfValue = document.getElementsByTagName('meta')['gorilla.csrf.Token'].getAttribute('content'),
+        check = evt.target,
         id = check.getAttribute('data-id'),
         url = window.location.href + '/done/' + id
 
       var response = await fetch(url, {
         method: 'PUT',
         headers: {
+          'X-CSRF-Token': csrfValue,
           'Content-Type': 'application/json'
         }
       })

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/microcosm-cc/bluemonday"
 	"gitub.com/imartingraham/todobin/internal/model"
@@ -17,11 +18,14 @@ import (
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	tpl := template.Must(template.ParseFiles("web/template/index.html"))
 	var tplvars struct {
-		Name string
-		Todo string
+		CSRFToken string
+		Name      string
+		Todo      string
 	}
+
 	switch r.Method {
 	case "GET":
+		tplvars.CSRFToken = csrf.Token(r)
 
 	case "POST":
 		// Disallow all html tags
@@ -70,6 +74,13 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 
 // HandleTodos is the route for "/todo/[uuid]"
 func HandleTodos(w http.ResponseWriter, r *http.Request) {
+
+	var tplvars struct {
+		CSRFToken string
+		TodoList  *model.TodoList
+	}
+
+	tplvars.CSRFToken = csrf.Token(r)
 	tpl := template.Must(template.ParseFiles("web/template/todo.html"))
 	vars := mux.Vars(r)
 	listID, ok := vars["listId"]
@@ -83,11 +94,8 @@ func HandleTodos(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	err = tpl.ExecuteTemplate(w, "todo.html", struct {
-		TodoList *model.TodoList
-	}{
-		TodoList: list,
-	})
+	tplvars.TodoList = list
+	err = tpl.ExecuteTemplate(w, "todo.html", tplvars)
 	if err != nil {
 		log.Fatalf("[error] failed to execute todo.html: %v\n", err)
 	}
