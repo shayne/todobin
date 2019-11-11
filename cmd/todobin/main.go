@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"gitub.com/imartingraham/todobin/internal/route"
@@ -15,9 +16,9 @@ func main() {
 	r.HandleFunc("/", route.HandleIndex)
 
 	http.Handle("/", r)
-
-	fmt.Println("Ready and listening on :3000")
-	err := http.ListenAndServe(":3000", nil)
+	port := os.Getenv("PORT")
+	fmt.Println("Ready and listening on " + port)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		panic(err)
 	}

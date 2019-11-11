@@ -15,6 +15,7 @@ services:
     links:
       - db
     environment:
+      - PORT=3000
       - POSTGRES_HOST=db
       - POSTGRES_DB=toodobin_dev
       - POSTGRES_USER=toodobin_dev
