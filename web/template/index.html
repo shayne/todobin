@@ -33,24 +33,35 @@
     </div>
   </div>
   <script>
-    var lists = getStoredLists();
-    if (Object.keys(lists).length) {
-      var listItems = Object.keys(lists).reduce(function (memo, uuid) {
-        var name = lists[uuid];
-        var listItem = `
-        <li class="stored-list-item">
-          <a href="/todo/${uuid}">${name}</a>
-        </li>
-      `
-        memo += listItem
-        return memo
-      }, '')
-      var ul = document.getElementById('saved-lists')
-      ul.innerHTML = listItems
-      var savedListWrap = document.getElementById('saved-lists-wrap')
-      savedListWrap.classList.remove('hide')
-
+    function removeList(uuid) {
+      var lists = getStoredLists()
+      delete lists[uuid]
+      saveLists(lists)
+      var listItem = document.getElementById(`todo-${uuid}`)
+      listItem && listItem.remove()
     }
+
+    function renderStoredLists() {
+      var lists = getStoredLists();
+
+      if (Object.keys(lists).length) {
+        var listItems = Object.keys(lists).reduce(function (memo, uuid) {
+          var name = lists[uuid];
+          var listItem = `
+          <li class="stored-list-item" id="todo-${uuid}">
+            <a href="/todo/${uuid}">${name}</a> | <a href="#" onclick="removeList('${uuid}')">Remove</a>
+          </li>
+          `
+          memo += listItem
+          return memo
+        }, '')
+        var ul = document.getElementById('saved-lists')
+        ul.innerHTML = listItems
+        var savedListWrap = document.getElementById('saved-lists-wrap')
+        savedListWrap.classList.remove('hide')
+      }
+    }
+    renderStoredLists()
   </script>
 </body>
 
