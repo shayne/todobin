@@ -39,9 +39,8 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 			Name: p.Sanitize(r.FormValue("name")),
 		}
 
-		tplvars.Todo = r.FormValue("todolist")
-
-		rawTodos := strings.Split(r.FormValue("todolist"), "\n")
+		tplvars.Todo = strings.TrimSpace(r.FormValue("todolist"))
+		rawTodos := strings.Split(tplvars.Todo, "\n")
 
 		for _, t := range rawTodos {
 			if strings.HasPrefix(t, "-") {
