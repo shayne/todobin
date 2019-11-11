@@ -5,13 +5,18 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/csrf"
+	"github.com/gorilla/mux"
 	"gitub.com/imartingraham/todobin/internal/route"
 )
 
 func main() {
+
 	r := mux.NewRouter()
+
+	fs := http.FileServer(http.Dir("./public"))
+	r.PathPrefix("/scripts/").Handler(fs)
+	r.PathPrefix("/styles/").Handler(fs)
 	r.HandleFunc("/todo/{listId}", route.HandleTodos)
 	r.HandleFunc("/todo/{listId}/done/{todoId}", route.HandleTodoDone)
 	r.HandleFunc("/", route.HandleIndex)

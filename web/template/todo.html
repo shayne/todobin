@@ -3,27 +3,15 @@
 
 <head>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+  <link rel="stylesheet" href="/styles/styles.css" />
   <meta name="gorilla.csrf.Token" content="{{.CSRFToken}}" />
-  <style>
-    .todo-item {
-      list-style: none;
-    }
-
-    .todo-item.done {
-      text-decoration: line-through;
-      color: #aaa;
-    }
-
-    .todo-item label {
-      font-weight: normal;
-    }
-  </style>
+  <script src="/scripts/index.js"></script>
 </head>
 
 <body>
   <div class="container">
     <div class="row">
-      <h1>{{.TodoList.Name}}</h1>
+      <h1 id="todo-list-name">{{.TodoList.Name}}</h1>
       {{if .TodoList.Todos}}
       <ul class="todo-list">
         {{range .TodoList.Todos}}
@@ -68,6 +56,17 @@
       var check = checks[i]
       check.addEventListener('change', markTodo)
     }
+
+
+    function addToLocalStorage() {
+      var uuid = window.location.pathname.replace('/todo/', '')
+      var title = document.getElementById('todo-list-name').innerText
+      var lists = getStoredLists()
+      lists[uuid] = title
+      saveLists(lists)
+    }
+
+    addToLocalStorage();
   </script>
 </body>
 

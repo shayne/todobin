@@ -3,6 +3,8 @@
 
 <head>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+  <link rel="stylesheet" href="/styles/styles.css" />
+  <script src="/scripts/index.js"></script>
 </head>
 
 <body>
@@ -21,7 +23,35 @@
         </form>
       </div>
     </div>
+    <div class="row">
+      <div class="twelve columns">
+        <div id="saved-lists-wrap" class="hide">
+          <h2>Saved Lists</h2>
+          <ul id="saved-lists"></ul>
+        </div>
+      </div>
+    </div>
   </div>
+  <script>
+    var lists = getStoredLists();
+    if (Object.keys(lists).length) {
+      var listItems = Object.keys(lists).reduce(function (memo, uuid) {
+        var name = lists[uuid];
+        var listItem = `
+        <li class="stored-list-item">
+          <a href="/todo/${uuid}">${name}</a>
+        </li>
+      `
+        memo += listItem
+        return memo
+      }, '')
+      var ul = document.getElementById('saved-lists')
+      ul.innerHTML = listItems
+      var savedListWrap = document.getElementById('saved-lists-wrap')
+      savedListWrap.classList.remove('hide')
+
+    }
+  </script>
 </body>
 
 </html>

@@ -1,0 +1,15 @@
+.todo-item {
+  list-style: none;
+}
+
+.todo-item.done {
+  text-decoration: line-through;
+  color: #aaa;
+}
+
+.todo-item label {
+  font-weight: normal;
+}
+.hide{
+  display: none;
+}
