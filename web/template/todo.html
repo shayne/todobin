@@ -30,42 +30,66 @@
   </div>
   <script>
     var listId = '{{.TodoList.ID}}'
-    ws = new WebSocket('wss://' + window.location.host + '/ws')
+    var ping = null
+    var ws = null
+    function connectWs() {
+      ws = new WebSocket('wss://' + window.location.host + '/ws')
+      ws.addEventListener('message', function (e) {
+        var msg = JSON.parse(e.data)
+        console.log('msg', msg);
 
-    ws.addEventListener('message', function (e) {
-      var msg = JSON.parse(e.data)
-      console.log('msg', msg);
+        switch (msg.event) {
+          case 'todo:done':
+            var todoItem = document.getElementById(`todo-${msg.data.todo_id}`)
+            if (todoItem) {
+              var check = todoItem.querySelector('input[type="checkbox"]')
+              check.checked = msg.data.done
 
-      switch (msg.event) {
-        case 'todo:done':
-          var todoItem = document.getElementById(`todo-${msg.data.todo_id}`)
-          console.log('todoItem', todoItem);
-
-          if (todoItem) {
-            var check = todoItem.querySelector('input[type="checkbox"]')
-            check.checked = msg.data.done
-
-            if (msg.data.done) {
-              todoItem.classList.add('done')
-            } else {
-              todoItem.classList.remove('done')
-
+              if (msg.data.done) {
+                todoItem.classList.add('done')
+              } else {
+                todoItem.classList.remove('done')
+              }
             }
-          }
-          break;
-        default:
-          break;
-      }
-    })
+            break;
+          case 'register:success':
+            // just in case we somehow get multiple register:success
+            if (ping) {
+              clearInterval(ping)
+            }
+            ping = setInterval(function () {
+              ws.send(JSON.stringify({
+                event: 'ping',
+                data: {}
+              }))
+            }, 30000)
 
-    ws.onopen = function () {
-      ws.send(JSON.stringify({
-        event: 'register',
-        data: {
-          list_id: listId
+            break
+          default:
+            break;
         }
-      }))
+      })
+
+      ws.onopen = function () {
+        ws.send(JSON.stringify({
+          event: 'register',
+          data: {
+            list_id: listId
+          }
+        }))
+      }
+      ws.onclose = function () {
+        if (ping) {
+          clearInterval(ping);
+        }
+        // this is just a quick hack. I should eventually do
+        // and exponential backoff but ¯\_(ツ)_/¯
+        setTimeout(function () {
+          connectWs()
+        }, 5000)
+      }
     }
+
 
     async function markTodo(evt) {
       var csrfValue = document.getElementsByTagName('meta')['gorilla.csrf.Token'].getAttribute('content'),
@@ -105,7 +129,6 @@
       check.addEventListener('change', markTodo)
     }
 
-
     function addToLocalStorage() {
       var uuid = window.location.pathname.replace('/todo/', '')
       var title = document.getElementById('todo-list-name').innerText
@@ -114,8 +137,8 @@
       saveLists(lists)
     }
 
-    addToLocalStorage();
-
+    addToLocalStorage()
+    connectWs()
   </script>
 </body>
 
