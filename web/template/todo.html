@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" />
+  <link rel="stylesheet" href="/styles/styles.css" />
+  <meta name="gorilla.csrf.Token" content="{{.CSRFToken}}" />
+  <script src="/scripts/index.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <a href="/">Home</a>
+      <h1 id="todo-list-name">{{.TodoList.Name}}</h1>
+      {{if .TodoList.Todos}}
+      <ul class="todo-list">
+        {{range .TodoList.Todos}}
+        <li class="todo-item{{if .Done}} done{{end}}" id="todo-{{.ID}}">
+          <label for="todo-check-{{.ID}}">
+            <input type="checkbox" class="todo-done" name="done" value="true" data-id="{{.ID}}" id="todo-check-{{.ID}}"
+              {{if .Done}}checked{{end}} />
+            <span class="todo-todo">{{.Todo}}</span>
+          </label>
+        </li>
+        {{end}}
+      </ul>
+      {{end}}
+    </div>
+  </div>
+  <script>
+    var listId = '{{.TodoList.ID}}'
+    var ping = null
+    var ws = null
+    function connectWs() {
+      ws = new WebSocket('wss://' + window.location.host + '/ws')
+      ws.addEventListener('message', function (e) {
+        var msg = JSON.parse(e.data)
+        console.log('msg', msg);
+
+        switch (msg.event) {
+          case 'todo:done':
+            var todoItem = document.getElementById(`todo-${msg.data.todo_id}`)
+            if (todoItem) {
+              var check = todoItem.querySelector('input[type="checkbox"]')
+              check.checked = msg.data.done
+
+              if (msg.data.done) {
+                todoItem.classList.add('done')
+              } else {
+                todoItem.classList.remove('done')
+              }
+            }
+            break;
+          case 'register:success':
+            // just in case we somehow get multiple register:success
+            if (ping) {
+              clearInterval(ping)
+            }
+            ping = setInterval(function () {
+              ws.send(JSON.stringify({
+                event: 'ping',
+                data: {}
+              }))
+            }, 30000)
+
+            break
+          default:
+            break;
+        }
+      })
+
+      ws.onopen = function () {
+        ws.send(JSON.stringify({
+          event: 'register',
+          data: {
+            list_id: listId
+          }
+        }))
+      }
+      ws.onclose = function () {
+        if (ping) {
+          clearInterval(ping);
+        }
+        // this is just a quick hack. I should eventually do
+        // and exponential backoff but ¯\_(ツ)_/¯
+        setTimeout(function () {
+          connectWs()
+        }, 5000)
+      }
+    }
+
+
+    async function markTodo(evt) {
+      var csrfValue = document.getElementsByTagName('meta')['gorilla.csrf.Token'].getAttribute('content'),
+        check = evt.target,
+        id = check.getAttribute('data-id'),
+        url = window.location.href + '/done/' + id
+
+      var response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'X-CSRF-Token': csrfValue,
+          'Content-Type': 'application/json'
+        }
+      })
+      var result = await response.json();
+      var todoItem = document.getElementById('todo-' + result.id)
+      if (result.done) {
+        todoItem.classList.add('done')
+      } else {
+        todoItem.classList.remove('done')
+      }
+
+      ws.send(JSON.stringify({
+        event: 'todo:done',
+        data: {
+          list_id: listId,
+          todo_id: id,
+          done: result.done
+        }
+      }))
+    }
+
+    var checks = document.querySelectorAll('.todo-done')
+
+    for (var i = 0; i < checks.length; i++) {
+      var check = checks[i]
+      check.addEventListener('change', markTodo)
+    }
+
+    function addToLocalStorage() {
+      var uuid = window.location.pathname.replace('/todo/', '')
+      var title = document.getElementById('todo-list-name').innerText
+      var lists = getStoredLists()
+      lists[uuid] = title
+      saveLists(lists)
+    }
+
+    addToLocalStorage()
+    connectWs()
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,34 @@
+version: "3.7"
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - goroot:/go
+      - vscode-server:/home/go/.vscode-server
+      - ~/.ssh:/home/go/.ssh
+      - .:/home/go/app
+    ports:
+      - 3000:3000
+    links:
+      - db
+    environment:
+      - PORT=3000
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=toodobin_dev
+      - POSTGRES_USER=toodobin_dev
+      - POSTGRES_PASSWORD=toodobin_dev
+      - CSRF_TOKEN="02A],K1zcT7Z9Ni)9-uv%-]S?0$UIz"
+  db:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=toodobin_dev
+      - POSTGRES_USER=toodobin_dev
+      - POSTGRES_PASSWORD=toodobin_dev
+volumes:
+  vscode-server:
+  goroot:
