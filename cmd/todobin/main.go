@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-
+	go route.HandleMessages()
 	r := mux.NewRouter()
 
 	fs := http.FileServer(http.Dir("./web/public"))
@@ -19,9 +19,11 @@ func main() {
 	r.PathPrefix("/styles/").Handler(fs)
 	r.HandleFunc("/todo/{listId}", route.HandleTodos)
 	r.HandleFunc("/todo/{listId}/done/{todoId}", route.HandleTodoDone)
+	r.HandleFunc("/ws", route.HandleWs)
 	r.HandleFunc("/", route.HandleIndex)
 
 	http.Handle("/", r)
+
 	port := os.Getenv("PORT")
 	fmt.Println("Ready and listening on " + port)
 	p := csrf.Protect([]byte(os.Getenv("CSRF_TOKEN")))
